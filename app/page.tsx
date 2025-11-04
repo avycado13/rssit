@@ -1,65 +1,171 @@
-import Image from "next/image";
+"use client"
 
-export default function Home() {
+import Image from "next/image"
+import { Avatar, AvatarFallback } from "../components/ui/avatar"
+import { Button } from "../components/ui/button"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "../components/ui/card"
+import { DehydratedState } from '@tanstack/react-query';
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+  useQuery,
+} from '@tanstack/react-query'
+import { Entry } from "@/lib/types"
+
+
+export async function getServerSideProps() {
+  const queryClient = new QueryClient()
+
+  await queryClient.prefetchQuery({
+    queryKey: ['feedentries'],
+    queryFn: getFeedEntries,
+  })
+
+  return {
+    props: {
+      dehydratedState: dehydrate(queryClient),
+    },
+  }
+}
+
+type HomeProps = {
+  dehydratedState: DehydratedState
+}
+
+export default function Home({ dehydratedState }: HomeProps) {
+  const { data: entries = [], isLoading } = useQuery({ queryKey: ['entries'], queryFn: getFeedEntries })
+
+
+  function vote(id: number, type: number) {
+    fetch(`/api/entries/${id}/vote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ type }),
+    }).catch((err) => {
+      console.error('Failed to vote:', err);
+    });
+  }
+
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    <HydrationBoundary state={dehydratedState}>
+      <div className="min-h-screen bg-zinc-50 dark:bg-black text-slate-900 dark:text-zinc-50">
+        <header className="border-b bg-white dark:bg-black/20">
+          <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Image src="/next.svg" alt="logo" width={36} height={24} className="dark:invert" />
+              <h1 className="text-lg font-semibold">rssit</h1>
+              <span className="text-sm text-muted-foreground">A simple reddit-style feed</span>
+            </div>
+            <nav className="flex items-center gap-3">
+              <Button variant="ghost" size="sm">New</Button>
+              <Button variant="outline" size="sm">Top</Button>
+            </nav>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-6xl px-6 py-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <section className="lg:col-span-2 flex flex-col gap-6">
+
+
+            <div className="flex flex-col gap-4">
+              {isLoading ? (
+                <div className="p-4 text-center">Loading entries…</div>
+              ) : (
+                entries?.map((p) => (
+                  <Card key={p.id} className="">
+                    <CardHeader className="flex items-start gap-4">
+                      <Avatar>
+                        {/* {p.avatar ? (
+                        <AvatarImage src={p.avatar} alt={p.author} />
+                      ) : ( */}
+                        <AvatarFallback>{p.author?.[0]?.toUpperCase() ?? "U"}</AvatarFallback>
+                        {/* )} */}
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <div className="text-sm font-medium">{p.author}</div>
+                            <div className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleString()}</div>
+                          </div>
+                          {/* <div className="text-sm text-muted-foreground">{p.comments} comments</div> */}
+                        </div>
+                        <CardTitle className="mt-3">{p.title}</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription>{p.content}</CardDescription>
+                    </CardContent>
+                    <CardFooter>
+                      <div className="flex items-center gap-2">
+                        <button
+                          aria-label="upvote"
+                          onClick={() => vote(p.id, 1)}
+                          className="rounded-md px-2 py-1 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                        >
+                          ▲
+                        </button>
+                        <div className="text-sm font-medium">{p.upvotesCount}</div>
+                        <button
+                          aria-label="downvote"
+                          onClick={() => vote(p.id, -1)}
+                          className="rounded-md px-2 py-1 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))
+              )}
+            </div>
+          </section>
+
+          <aside className="hidden lg:block">
+            <div className="sticky top-6 flex flex-col gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Rules</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    <li>Be kind</li>
+                    <li>No spam</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </aside>
+        </main>
+      </div>
+    </HydrationBoundary>
+  )
+}
+async function getFeedEntries(): Promise<Entry[]> {
+  try {
+    const res = await fetch("/api/feedentries");
+    if (!res.ok) throw new Error("Network response was not ok");
+
+    const data = await res.json();
+
+    if (Array.isArray(data)) {
+      return data as Entry[];
+    }   
+
+    // fallback if data is not an array
+    return [];
+  } catch (err) {
+    console.error("Failed to fetch feed posts:", err);
+    return [];
+  }
 }

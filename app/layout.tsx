@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useState } from "react";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,12 +26,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // With SSR, we usually want to set some default staleTime
+            // above 0 to avoid refetching immediately on the client
+            staleTime: 60 * 1000,
+          },
+        },
+      }),
+  )
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <SpeedInsights />
+        </QueryClientProvider>
+
       </body>
     </html>
   );

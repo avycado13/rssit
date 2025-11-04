@@ -1,0 +1,5 @@
+onlyBuiltDependencies:
+  - '@swc/core'
+  - '@vercel/speed-insights'
+  - esbuild
+  - msw
