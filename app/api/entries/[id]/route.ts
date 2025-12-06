@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 
 interface Props {
-  params: { feedId: string };
+  params: { id: string };
 }
 
 export const GET = async (req: NextRequest, { params }: Props) => {
-    const entries = await db.select().from(entriesTable).where(eq(entriesTable.feedId, Number(params.feedId))).limit(10);
+    const entries = await db.select().from(entriesTable).where(eq(entriesTable.feedId, Number(params.id))).limit(10);
     return NextResponse.json(entries);
 };
