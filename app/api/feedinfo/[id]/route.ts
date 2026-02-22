@@ -1,14 +1,14 @@
-import { db } from "@/lib/db";
-import { feeds as feedsTable} from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { getFeedById } from "@/lib/queries";
 import { NextRequest, NextResponse } from "next/server";
 
-
-interface Props {
-  params: { feedId: string };
-}
-
-export const GET = async (req: NextRequest, { params }: Props) => {
-    const feed = await db.select().from(feedsTable).where(eq(feedsTable.id, Number(params.feedId))).limit(1);
-    return NextResponse.json(feed);
+export const GET = async (
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) => {
+  const { id } = await params;
+  const feed = await getFeedById(Number(id));
+  if (!feed) {
+    return NextResponse.json({ error: "Feed not found" }, { status: 404 });
+  }
+  return NextResponse.json(feed);
 };
